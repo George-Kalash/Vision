@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vision — Price Lookup</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    form { display: grid; gap: .75rem; max-width: 420px; }
+    label { display: grid; gap: .25rem; }
+    input[type="text"], input[type="password"] { padding: .6rem .7rem; border: 1px solid #ccc; border-radius: .5rem; }
+    button { padding: .6rem .9rem; border: 0; border-radius: .5rem; cursor: pointer; }
+    #out { margin-top: 1rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Enter your API key and stock ticker</h1>
+
+  <form id="quote-form" autocomplete="off">
+    <label>
+      Ticker
+      <input id="ticker" name="ticker" type="text" placeholder="e.g., AAPL" required />
+    </label>
+
+    <label>
+      Twelve Data API Key
+      <input id="apikey" name="apikey" type="password" placeholder="paste your key" required />
+    </label>
+
+    <label style="display:flex;align-items:center;gap:.5rem">
+      <input id="remember" type="checkbox" />
+      Remember key in this browser (localStorage)
+    </label>
+
+    <button type="submit">Get Latest Price</button>
+  </form>
+
+  <div id="out"></div>
+
+  <script type="module" src="./getStock.js"></script>
+</body>
+</html>
