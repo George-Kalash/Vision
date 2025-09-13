@@ -1,0 +1,10 @@
+certifi==2025.8.3
+charset-normalizer==3.4.3
+idna==3.10
+requests==2.32.4
+urllib3==2.5.0
+
+# Additional dependencies for Vision project
+edgar>=5.0.0
+pandas>=2.0.0
+googlefinance>=0.7

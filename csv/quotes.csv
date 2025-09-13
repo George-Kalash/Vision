@@ -1,0 +1,2 @@
+symbol,name,exchange,mic_code,currency,datetime,timestamp,last_quote_at,open,high,low,close,volume,previous_close,change,percent_change,average_volume,is_market_open,fifty_two_week
+AAPL,Apple Inc.,NASDAQ,XNGS,USD,2025-08-12,1755005400,1755005400,228.0099945,230.80000,227.070007,229.64999,55626200,227.17999,2.47000,1.087244,77990400,False,"{""low"":""169.21001"",""high"":""260.10001"",""low_change"":""60.43999"",""high_change"":""-30.45001"",""low_change_percent"":""35.71892"",""high_change_percent"":""-11.70704"",""range"":""169.210007 - 260.100006""}"

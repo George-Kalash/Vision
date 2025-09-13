@@ -1,0 +1,21 @@
+symbol,name,exchange,market_cap,datetime,currency,open,high,low,close,previous_close,change,percent_change,volume
+A,Agilent Technologies Inc.,NYSE,,2025-08-12,USD,114.51000,117.37000,114.40000,117.32000,114.13000,3.19000,2.79506,917400
+AA,Alcoa Corporation,NYSE,,2025-08-12,USD,29.73000,31.5,29.61000,31.38000,29.33000,2.049999,6.98943,7308700
+AACT,Ares Acquisition Corporation II,NYSE,,2025-08-12,USD,11.39000,11.41000,11.37000,11.38000,11.41000,-0.029999733,-0.26292492,38100
+AAM,Aa Mission Acquisition Corp,NYSE,,2025-08-12,USD,10.49000,10.49000,10.46000,10.46000,10.5,-0.039999962,-0.38095202,9800
+AAMI,Acadian Asset Management Inc.,NYSE,,2025-08-12,USD,45.72000,47.91000,45.69500,47.78000,45.34000,2.44000,5.38156,259500
+AAM.UN,AA Mission Acquisition Corp.,NYSE,,2025-08-12,USD,10.52000,10.52000,10.52000,10.52000,10.52000,0,0,0
+AAM.WT,AA Mission Acquisition Corp WT,NYSE,,2025-08-12,USD,0.13000000,0.13000000,0.10000000,0.10000000,0.12000000,-0.019999996,-16.66666,6084
+AAP,Advance Auto Parts Inc.,NYSE,,2025-08-12,USD,59.69000,60.89000,58.82000,59.11000,59.36000,-0.25,-0.42115903,1446400
+AAQC,Accelerate Acquisition Corp.,NYSE,,,,,,,,,,,
+AAUC,Allied Gold Corp,NYSE,,,,,,,,,,,
+ABBV,AbbVie Inc.,NYSE,,,,,,,,,,,
+ABCB,Ameris Bancorp,NYSE,,,,,,,,,,,
+ABG,Asbury Automotive Group Inc.,NYSE,,,,,,,,,,,
+ABLS,Abacus FCF Small Cap Leaders Fund,NYSE,,,,,,,,,,,
+ABM,ABM Industries Inc.,NYSE,,,,,,,,,,,
+ABT,Abbott Laboratories,NYSE,,,,,,,,,,,
+AC,Associated Capital Group Inc.,NYSE,,,,,,,,,,,
+ACA,Arcosa Inc.,NYSE,,,,,,,,,,,
+ACCO,Acco Brands Corporation,NYSE,,,,,,,,,,,
+ACCS,Access Newswire Inc.,NYSE,,,,,,,,,,,

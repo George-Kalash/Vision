@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Watchlist (Pure JS)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root { --bg:#0b0f16; --card:#111827; --accent:#6ee7b7; --danger:#fca5a5; --muted:#9ca3af; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:linear-gradient(135deg,#0b0f16,#121826); color:#fff; }
+    .wrap { max-width: 920px; margin: 32px auto; padding: 0 16px; }
+    .bar { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .left { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+    .btn { border:1px solid #ffffff33; background:#ffffff14; color:#fff; padding:8px 10px; border-radius:10px; font-size:12px; cursor:pointer; }
+    .btn:hover { background:#ffffff24; }
+    .btn:disabled { opacity:.6; cursor:default; }
+    .muted { color:var(--muted); font-size:12px; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap:12px; }
+    .card { background: #00000033; border:1px solid #ffffff1a; border-radius:14px; padding:12px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    .sym { font-weight:700; letter-spacing:.3px; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .price { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:20px; min-height:28px; }
+    .pct { display:inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; padding:2px 6px; border-radius:999px; margin-top:6px; }
+    .pct.pos { background: #065f4626; color:#6ee7b7; }
+    .pct.neg { background: #7f1d1d26; color:#fca5a5; }
+    .pct.na  { background: #334155; color:#cbd5e1; }
+    .row { display:flex; gap:8px; align-items:center; }
+    .ipt { padding:7px 9px; background:#0b1220; border:1px solid #ffffff2a; border-radius:8px; color:#fff; font-size:12px; }
+    .x { margin-left:auto; color:#94a3b8; font-size:12px; cursor:pointer; }
+    .x:hover { color:#fff; }
+    .err { margin-top:8px; background:#7f1d1d26; color:#fca5a5; border:1px solid #7f1d1d55; padding:8px; border-radius:10px; font-size:12px; }
+    .foot { margin-top:16px; font-size:11px; color:#9ca3af; }
+    .fade { opacity:.6 }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="bar">
+      <div class="left">
+        <strong>Live Watchlist</strong>
+        <span class="muted" id="provider">Google Sheets API via Apps Script</span>
+      </div>
+      <div class="left">
+        <button id="toggle" class="btn">Toggle A506</button>
+        <span id="tval" class="muted"></span>
+      </div>
+    </div>
+
+    <div class="bar">
+      <div class="left">
+        <input id="addSym" class="ipt" placeholder="Add ticker (e.g., TSLA)" />
+        <button id="addBtn" class="btn">Add</button>
+        <button id="resetBtn" class="btn">Reset</button>
+      </div>
+      <div class="muted" id="status">Idle</div>
+    </div>
+
+    <div id="grid" class="grid"></div>
+
+    <div id="err" class="err" style="display:none;"></div>
+
+    <div class="foot">
+      Tip: this page polls every 5s and only requests the tickers currently displayed. If your Apps Script uses JSON + <em>ContentService</em>, we’ll first try <code>fetch</code> then fall back to JSONP (<code>?callback=...</code>). Data writes are followed by a refresh. Sources at bottom.
+    </div>
+  </div>
+
+<script>
+/*** CONFIG ***/
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbzh-IjBVMARz_i6otbU9hufAflpm90X-S9bl8cGbJsj6P-ylgGIKb5dP1pvdmVGMjF2PA/exec";
+const INITIAL = ["AAPL"];
+const POLL_MS = 5000;
+
+/*** UTILITIES ***/
+// JSONP helper (uses ?callback=<fn>)
+function jsonp(url, timeout = 15000) {
+  return new Promise((resolve, reject) => {
+    const cb = `__cb_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const sep = url.includes("?") ? "&" : "?";
+    const script = document.createElement("script");
+    let finished = false;
+    window[cb] = (data) => { finished = true; cleanup(); resolve(data); };
+    function cleanup() {
+      try { delete window[cb]; } catch {}
+      if (script && script.parentNode) script.parentNode.removeChild(script);
+    }
+    script.src = `${url}${sep}callback=${cb}`;
+    script.onerror = () => { if (!finished) { cleanup(); reject(new Error("JSONP network error")); } };
+    document.body.appendChild(script);
+    setTimeout(() => { if (!finished) { cleanup(); reject(new Error("JSONP timeout")); } }, timeout);
+  });
+}
+
+// Fetch JSON first, else JSONP (GET only)
+async function getJSON(url, abortSignal) {
+  try {
+    const res = await fetch(url, { method: "GET", signal: abortSignal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    // fallback to JSONP for Apps Script web apps
+    return await jsonp(url);
+  }
+}
+
+// Format helpers
+const fmtPrice = p => p == null ? "--" : Number(p).toLocaleString("en-US", { minimumFractionDigits:2, maximumFractionDigits:2 });
+const fmtPct   = x => x == null || !isFinite(Number(x)) ? "--" : `${x >= 0 ? "+" : ""}${Number(x).toFixed(2)}%`;
+
+/*** DOM + STATE ***/
+const grid = document.getElementById("grid");
+const addSym = document.getElementById("addSym");
+const addBtn = document.getElementById("addBtn");
+const resetBtn = document.getElementById("resetBtn");
+const statusEl = document.getElementById("status");
+const errEl = document.getElementById("err");
+const toggleBtn = document.getElementById("toggle");
+const tvalEl = document.getElementById("tval");
+
+let symbols = [...INITIAL];
+let pollTimer = null;
+let controller = null;
+
+/*** RENDER ***/
+function renderGrid() {
+  grid.innerHTML = "";
+  for (const s of symbols) {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.dataset.symbol = s;
+
+    const top = document.createElement("div");
+    top.className = "row";
+    const sym = document.createElement("div");
+    sym.className = "sym";
+    sym.textContent = s;
+    const rem = document.createElement("span");
+    rem.className = "x";
+    rem.textContent = "remove";
+    rem.onclick = () => { symbols = symbols.filter(x => x !== s); renderGrid(); };
+
+    top.appendChild(sym);
+    top.appendChild(rem);
+
+    const price = document.createElement("div");
+    price.className = "price";
+    price.textContent = ""; // loading state
+
+    const pct = document.createElement("div");
+    pct.className = "pct na";
+    pct.textContent = "--";
+
+    card.appendChild(top);
+    card.appendChild(price);
+    card.appendChild(pct);
+    grid.appendChild(card);
+  }
+}
+
+function getOnScreenSymbols() {
+  return Array.from(document.querySelectorAll("#grid .card"))
+    .map(el => el.dataset.symbol)
+    .filter(Boolean);
+}
+
+function updateUI(rows) {
+  const map = new Map(rows.map(r => [String(r.symbol).toUpperCase(), r]));
+  document.querySelectorAll("#grid .card").forEach(card => {
+    const sym = String(card.dataset.symbol).toUpperCase();
+    const r = map.get(sym);
+    const priceEl = card.querySelector(".price");
+    const pctEl = card.querySelector(".pct");
+
+    if (!r) {
+      priceEl.textContent = "--";
+      pctEl.textContent = "--";
+      pctEl.className = "pct na";
+      return;
+    }
+    priceEl.textContent = `$${fmtPrice(r.price)}`;
+
+    const pct = Number(r.percent);
+    pctEl.textContent = isFinite(pct) ? fmtPct(pct) : "--";
+    pctEl.className = "pct " + (isFinite(pct) ? (pct >= 0 ? "pos" : "neg") : "na");
+  });
+}
+
+/*** NETWORK ***/
+async function fetchQuotes(isInitial=false) {
+  const onScreen = getOnScreenSymbols();
+  if (onScreen.length === 0) return;
+  const qs = `symbols=${encodeURIComponent(onScreen.join(","))}`;
+  const url = `${ENDPOINT}?${qs}`;
+
+  errEl.style.display = "none";
+  if (isInitial) statusEl.textContent = "Loading…";
+
+  // abort any in-flight request before starting a new one
+  if (controller) controller.abort();
+  controller = new AbortController();
+
+  try {
+    const json = await getJSON(url, controller.signal);
+    const rows = Array.isArray(json?.data) ? json.data.map(n => ({
+      symbol: String(n.symbol || "").toUpperCase(),
+      price: isFinite(Number(n.price)) ? Number(n.price) : null,
+      percent: isFinite(Number(n.percent)) ? Number(n.percent) : null,
+    })) : [];
+    updateUI(rows);
+    statusEl.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+  } catch (e) {
+    errEl.textContent = `Error: ${e.message || e}`;
+    errEl.style.display = "block";
+    statusEl.textContent = "Error";
+  }
+}
+
+async function toggleA506ThenRefresh() {
+  toggleBtn.disabled = true;
+  tvalEl.textContent = "";
+  errEl.style.display = "none";
+  try {
+    // If you added a combined endpoint (set-and-read), you could call:
+    // const res = await getJSON(`${ENDPOINT}?action=setAndRead&cell=A506`);
+    // For broad compatibility, we do two steps:
+    const res = await jsonp(`${ENDPOINT}?action=toggleA506`);
+    if (typeof res?.value === "number") tvalEl.textContent = `A506 → ${res.value}`;
+  } catch (e) {
+    errEl.textContent = `Toggle failed: ${e.message || e}`;
+    errEl.style.display = "block";
+  } finally {
+    toggleBtn.disabled = false;
+    fetchQuotes(false); // refresh quotes after the write
+  }
+}
+
+/*** EVENTS ***/
+addBtn.onclick = () => {
+  const v = (addSym.value || "").trim().toUpperCase().replace(/[^A-Z0-9\.\-]/g,"");
+  if (!v) return;
+  if (!symbols.includes(v)) symbols.push(v);
+  addSym.value = "";
+  renderGrid();
+  fetchQuotes(false);
+};
+
+resetBtn.onclick = () => {
+  symbols = [...INITIAL];
+  renderGrid();
+  fetchQuotes(false);
+};
+
+toggleBtn.onclick = () => toggleA506ThenRefresh();
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; statusEl.classList.add("fade"); }
+  } else {
+    if (!pollTimer) { pollTimer = setInterval(fetchQuotes, POLL_MS); fetchQuotes(false); statusEl.classList.remove("fade"); }
+  }
+});
+
+window.addEventListener("beforeunload", () => {
+  if (pollTimer) clearInterval(pollTimer);
+  if (controller) controller.abort();
+});
+
+/*** BOOT ***/
+renderGrid();
+fetchQuotes(true);
+pollTimer = setInterval(fetchQuotes, POLL_MS);
+</script>
+</body>
+</html>
