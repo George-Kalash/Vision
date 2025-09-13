@@ -29,6 +29,7 @@ This module is part of a stock analyzer project that uses SEC data to retrieve b
    ```bash
    export SEC_UA="Your Name your@email (YourApp/1.0)"
    ```
+(The builder is currently in development, so features may not work as intended)
 
 4. Run the specific scripts as needed, for example:
    ```bash
