@@ -1,4 +1,5 @@
 import os, requests
+from datetime import date
 import sys
 import json
 from pathlib import Path
@@ -10,7 +11,7 @@ from edgar.xbrl import XBRLS
 from edgar.entity import public_companies
 
 
-set_identity("scccbf@gmail.com") 
+set_identity("youremail@somemail.com") 
 print("EdgarTools installed successfully!")
 
 
@@ -31,11 +32,13 @@ filing = company.latest("10-K")
 xbrl = XBRL.from_filing(filing)
 co = Company(ticker)
 
-def getIncomeStatementXBRL(c="AAPL", whichType="XBRL"):
+def getIncomeStatementXBRL(c="AAPL", form="10-K", period= , whichType="XBRL"):
     co = Company(c)
-    filings = co.get_filings(form="10-K").head(6)
-    xbrls = XBRLS.from_filings(filings)
-    stitched = xbrls.statements
+    filing = co.latest(form)
+    xbrl = XBRL.from_filing(filing)
+    stmts = xbrl.statements
+    income_statement = stmts.income_statement()
+    return income_statement.to_dataframe()
     # income_trend = stitched.income_statement(max_periods=8)
 
 def getCompanyFacts(c="AAPL"):
@@ -128,8 +131,8 @@ def __main__():
     # available_periods = xbrl.reporting_periods
     # print(available_periods)
     # print(dropconcept)
-    print(getIncomeStatement(c="AAPL", periods=10, form="10-K"))
-    # print(getIncomeStatementXBRL("AAPL", whichType=" "))
+    # print(getIncomeStatement(c="AAPL", periods=10, form="10-K"))
+    print(getIncomeStatementXBRL("AAPL"))
 
 __main__()
 
