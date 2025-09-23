@@ -2,8 +2,6 @@ import os, requests
 from datetime import date
 import sys
 import re
-import json
-from pathlib import Path
 from edgar import Company
 import pandas as pd
 from edgar import *  
@@ -33,7 +31,9 @@ filing = company.latest("10-K")
 xbrl = XBRL.from_filing(filing)
 co = Company(ticker)
 
-
+class Stock:
+    name: str
+    
 def _quarter_bounds(year: int, quarter: int) -> tuple[str, str]:
     if quarter not in (1, 2, 3, 4):
         raise ValueError("quarter must be 1..4")
@@ -43,28 +43,47 @@ def _quarter_bounds(year: int, quarter: int) -> tuple[str, str]:
     e = date(year, *ends[quarter]).strftime("%Y-%m-%d")
     return s, e
 
-def getIncomeStatementXBRL(ticker: str = "AAPL", form: str = "10-K", *, year: int | None = None, quarter: int | None = None,):
+def listRecentFilings(ticker: str = "AAPL", form: str = "10-Q", count: int = 5):
+    """List recent filings to see what's available"""
+    co = Company(ticker)
+    filings = co.get_filings(form=form, is_xbrl=True).head(count)
+    print(f"Recent {form} filings for {ticker}:")
+    for filing in filings:
+        print(f"  - {filing.filing_date}: {filing.form} - {filing.accession_number}")
+    return filings
+
+def getStatementXBRL(ticker: str = "AAPL", form: str = "10-K", statement: str = "IS", *,
+        year: int | None = None, quarter: int | None = None): 
+    # reeturns the statements obj
+    #statement = IS - income stmt, CF - cashflow stmt, BS - balance sheet
+    
     co = Company(ticker)
     filings = co.get_filings(form=form, is_xbrl=True) 
-    # filing = co.latest(form)
     
-    if year is not None and quarter is None:
+    # If no year/quarter specified, get the latest filing
+    if year is None and quarter is None:
+        filing = filings.latest()
+    elif year is not None and quarter is None:
         date_filter = f"{year}-01-01:{year}-12-31"
         filings = filings.filter(date=date_filter)
-        
+        filing = filings.latest()
     elif year is not None and quarter is not None:
         start, end = _quarter_bounds(year, quarter)
         filings = filings.filter(date=f"{start}:{end}")
+        filing = filings.latest()
+    else:
+        filing = filings.latest()
     
-    filing = filings.latest()          
     if not filing:
         return None
     
     xb = filing.xbrl()
     if not xb:
         return None
-    return xb.statements.income_statement().to_dataframe()
-    # income_trend = stitched.income_statement(max_periods=8)
+    return xb.statements
+
+
+# income_trend = stitched.income_statement(max_periods=8)
 
 def getCompanyFacts(c="AAPL"):
     return co.get_facts()
@@ -159,10 +178,36 @@ def __main__():
     word = "Revenue"
     col = "label"
 
-    for i in range(0, 10):
+    # First, let's see what filings are actually available
+    print("Checking recent filings...")
+    listRecentFilings(ticker="MU", form="10-Q", count=10)
+    print("\n" + "="*50 + "\n")
+    
+    # print(getIncomeStatement(c="MU", form="10-Q"))
+    
+    # Get the latest filing without any date filter
+    print("Getting latest filing without date filter...")
+    statements = getStatementXBRL(ticker="MU", form="10-Q")
+    if statements is not None:
+        df = statements.income_statement()
+        print("Latest available filing:")
+        print(df.head() if hasattr(df, 'head') else df)
+        print("\n" + "="*50 + "\n")
+    
+    # Then check by year
+    ln = 0
+    for i in range(0, ln):  # Just check last 3 years to be quicker
         year = 2025 - i
-        df = getIncomeStatementXBRL(year=year)
-
+        print(f"Checking year {year}...")
+        statements = getStatementXBRL(ticker="MU", form="10-Q", year=year)
+        if statements is None:
+            print(f"{year}: no statements object returned")
+            continue
+        df = statements.income_statement()
+        print(f"Found filing for {year}:")
+        # print(df)
+        print(df.head() if hasattr(df, 'head') else df)
+        break
         if df is None or df.empty:
             print(f"{year}: no data")
             continue
