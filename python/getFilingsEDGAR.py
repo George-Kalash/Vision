@@ -1,6 +1,7 @@
 import os, requests
 from datetime import date
 import sys
+import re
 import json
 from pathlib import Path
 from edgar import Company
@@ -32,13 +33,37 @@ filing = company.latest("10-K")
 xbrl = XBRL.from_filing(filing)
 co = Company(ticker)
 
-def getIncomeStatementXBRL(c="AAPL", form="10-K", period= , whichType="XBRL"):
-    co = Company(c)
-    filing = co.latest(form)
-    xbrl = XBRL.from_filing(filing)
-    stmts = xbrl.statements
-    income_statement = stmts.income_statement()
-    return income_statement.to_dataframe()
+
+def _quarter_bounds(year: int, quarter: int) -> tuple[str, str]:
+    if quarter not in (1, 2, 3, 4):
+        raise ValueError("quarter must be 1..4")
+    starts = {1: (1, 1), 2: (4, 1), 3: (7, 1), 4: (10, 1)}
+    ends   = {1: (3, 31), 2: (6, 30), 3: (9, 30), 4: (12, 31)}
+    s = date(year, *starts[quarter]).strftime("%Y-%m-%d")
+    e = date(year, *ends[quarter]).strftime("%Y-%m-%d")
+    return s, e
+
+def getIncomeStatementXBRL(ticker: str = "AAPL", form: str = "10-K", *, year: int | None = None, quarter: int | None = None,):
+    co = Company(ticker)
+    filings = co.get_filings(form=form, is_xbrl=True) 
+    # filing = co.latest(form)
+    
+    if year is not None and quarter is None:
+        date_filter = f"{year}-01-01:{year}-12-31"
+        filings = filings.filter(date=date_filter)
+        
+    elif year is not None and quarter is not None:
+        start, end = _quarter_bounds(year, quarter)
+        filings = filings.filter(date=f"{start}:{end}")
+    
+    filing = filings.latest()          
+    if not filing:
+        return None
+    
+    xb = filing.xbrl()
+    if not xb:
+        return None
+    return xb.statements.income_statement().to_dataframe()
     # income_trend = stitched.income_statement(max_periods=8)
 
 def getCompanyFacts(c="AAPL"):
@@ -118,7 +143,6 @@ def toCSV(data: pd.DataFrame, filename: str):
                     # Update the value in the DataFrame
                     cleaned_data.at[index, col] = cell / 1_000_000
     
-    # Fill any remaining NaN values with a placeholder
     cleaned_data.fillna("-")
     
     # Save the modified DataFrame to a CSV file
@@ -132,73 +156,33 @@ def __main__():
     # print(available_periods)
     # print(dropconcept)
     # print(getIncomeStatement(c="AAPL", periods=10, form="10-K"))
-    print(getIncomeStatementXBRL("AAPL"))
+    word = "Revenue"
+    col = "label"
+
+    for i in range(0, 10):
+        year = 2025 - i
+        df = getIncomeStatementXBRL(year=year)
+
+        if df is None or df.empty:
+            print(f"{year}: no data")
+            continue
+
+        if col not in df.columns:
+            print(f"{year}: column '{col}' not found; available: {list(df.columns)}")
+            continue
+
+        mask_has_word = df[col].astype(str).str.contains(
+            rf"(?i)\b{re.escape(word)}\b", na=False
+        )
+        # migh use "mask_not_only" in the future if "mask_has_word" does not yeild results
+        mask_not_only = ~df[col].astype(str).str.fullmatch( 
+            rf"(?i)\s*{re.escape(word)}\s*", na=False
+        )
+
+        mask = mask_has_word
+
+        row = df.loc[mask]
+        print(f"{year}:\n{row}\n")
 
 __main__()
 
-
-# print(companyFacts.entity_info())
-
-
-# fin = co.get_financials()
-
-# print(fin.income_statement())
-
-
-# df = fin.income_statement().to_dataframe()
-# bs = fin.balance_sheet().to_dataframe()
-# # print(df)
-# if not df.empty:
-#     # Use the 'concept' column for a more reliable match
-#     revenue = df[df["concept"] == "us-gaap_Revenues"]
-#     if revenue.empty:
-#         revenue = df[df["concept"] == "us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax"]
-#     row = df[df["concept"] == "us-gaap_NetIncomeLoss" ]
-#     row2 = bs[bs["concept"] == "us-gaap_StockholdersEquity"]
-#     print(row2)
-#     if not row.empty:
-#         # latest period is typically the last column
-#         revenue = revenue.iloc[0, 2]
-#         net_income = row.iloc[0, 2]
-#         stockholder_equity = row2.iloc[0, 2]
-#         print(f"Revenue: {revenue:,.0f}")
-#         print(f"Net Income: {net_income}")
-#         print(f"Stockholder Equity: {stockholder_equity}")
-#     else:
-#         print("Net income not found in the income statement.")
-#         # If you want to see the whole dataframe when net income is not found
-#         # print(df)
-# else:
-#     print("Failed to retrieve income statement. The DataFrame is empty.")
-
-# print(dir(income_statement))
-# print(vars(Company))
-# print(co.industry)
-# [ 'balance_sheet', 'business_address', 'cash_flow', 'cik', 'data', 'display_name', 
-#  'facts', 'fiscal_year_end', 'get_exchanges', 'get_facts', 'get_filings', 'get_financials', 'get_icon', 'get_quarterly_financials', 'get_structured_statement', 
-#  'get_ticker', 'income_statement', 'industry', 'is_company', 'is_individual', 'latest', 'latest_tenk', 'latest_tenq', 'mailing_address', 'name', 'not_found', 
-#  'public_float', 'shares_outstanding', 'sic', 'tickers']
-# print(balance_sheet._calculate_balance_sheet_ratios())
-# if __name__ == '__main__':
-#     c = Company("NVDA")
-#     ticker = c.get_ticker()
-#     filings = c.get_filings(form="10-K")
-#     ticker = c.tickers
-#     print(filings)
-#     print(c.data.mailing_address)
-#     print(c)
-#     print(ticker[0])
-# print(f"Revenue: ${revenue:,.0f}, Net Income: ${net_income:,.0f}")
-
-# financials = company.get_financials()
-# filings = get_filings()
-
-# IS = company.income_statement()
-# BS = company.balance_sheet()
-# # CFS = company.cash_flow_statement()
-# if IS and BS is not None:
-#     print(IS)
-#     print(BS)
-#     # print(CFS)
-# # print(financials)
-# print(f"Shares Outstanding: {232.14*company.shares_outstanding:,.0f}")
