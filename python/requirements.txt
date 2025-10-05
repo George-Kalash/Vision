@@ -1,0 +1,5 @@
+yfinance
+edgartools
+pandas
+yahooquery
+yahooquery[premium]

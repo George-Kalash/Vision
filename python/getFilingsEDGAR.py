@@ -44,7 +44,6 @@ def _quarter_bounds(year: int, quarter: int) -> tuple[str, str]:
     return s, e
 
 def listRecentFilings(ticker: str = "AAPL", form: str = "10-Q", count: int = 5):
-    """List recent filings to see what's available"""
     co = Company(ticker)
     filings = co.get_filings(form=form, is_xbrl=True).head(count)
     print(f"Recent {form} filings for {ticker}:")
