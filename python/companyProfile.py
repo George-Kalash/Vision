@@ -116,7 +116,9 @@ class Enterprize:
   
   @property 
   def getCashFlowStatement(self, filingType="10Q", periods=5):
-    return # fill in
+    return 
+  
+  
 
   
 def __main__():
