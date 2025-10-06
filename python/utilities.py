@@ -1,6 +1,13 @@
 from edgar import *  
 from edgar.xbrl.xbrl import XBRL
 from datetime import date
+import os
+
+from dotenv import load_dotenv
+load_dotenv()
+
+set_identity(os.getenv("EDGAR_IDENTITY", "Your Name your.email@example.com"))
+__all__ = ['getStatementXBRL', 'listRecentFilings']
 def _quarter_bounds(year: int, quarter: int) -> tuple[str, str]:
     if quarter not in (1, 2, 3, 4):
         raise ValueError("quarter must be 1..4")
@@ -43,7 +50,7 @@ def getStatementXBRL(ticker: str = "AAPL", form: str = "10-K", statement: str = 
     if not filing:
         return None
     
-    xb = filing.xbrl()
+    xb = filing.xbrl() 
     if not xb:
         return None
     return xb.statements

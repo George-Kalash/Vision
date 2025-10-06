@@ -1,5 +1,6 @@
 from datetime import date
 import re
+from utilities import getStatementXBRL
 
 # Check if required packages are installed
 
@@ -38,7 +39,7 @@ except ImportError:
 
 
 SEC_UA = "your.email@example.com"  
-set_identity(SEC_UA) 
+set_identity(SEC_UA) # type: ignore
   
 class Enterprize: 
   def __init__ (self, ticker: str) -> None:
@@ -77,14 +78,6 @@ class Enterprize:
     except:
       return self.ask
 
-  @property
-  def getFilings(self):
-    try: 
-      filings = self.company.sec_filings
-      return filings
-    except:
-      return 'Error: API connection'
-
   # getHistoricalData used yahooquery (yq) over yfinance (yf)
   @property
   def getHistoricalData(self): 
@@ -102,23 +95,47 @@ class Enterprize:
       return "Wrong filing type"
     match stmtType:
       case "IS":
-        return self.getIncomeStatements(self, filingType, periods)
+        return self.getIncomeStatements(self, filingType, periods) # type: ignore
       case "BS":
-        return self.getBalanceSheets()
+        return self.getBalanceSheets()  # type: ignore
+      case "CF":
+        return self.getCashFlowStatement()  # type: ignore
   
   @property
   def getIncomeStatements(self, filingType="10Q", periods=5):
-    return # fill in
+    is_list = []
+    for i in range(date.today().year - periods, date.today().year + 1):
+      is_ = getStatementXBRL(self.ticker, filingType, "IS", year=i)
+      if is_:
+        is_list.append(is_)
+    if is_list:
+      # add stitching logic later
+      return is_list[-1]  # return the most recent income statement for now
+    return None
   
   @property
   def getBalanceSheets(self, filingType="10Q", periods=5):
-    return # fill in
-  
-  @property 
+    bs_list = []
+    for i in range(date.today().year - periods, date.today().year + 1):
+      bs = getStatementXBRL(self.ticker, filingType, "BS", year=i)
+      if bs:
+        bs_list.append(bs)
+    if bs_list:
+      # add stitching logic later
+      return bs_list[-1]  # return the most recent balance sheet for now
+    return None
+
+  @property
   def getCashFlowStatement(self, filingType="10Q", periods=5):
-    return 
-  
-  
+    cf_list = []
+    for i in range(date.today().year - periods, date.today().year + 1):
+      cf = getStatementXBRL(self.ticker, filingType, "CF", year=i)
+      if cf:
+        cf_list.append(cf)
+    if cf_list:
+      # add stitching logic later
+      return cf_list[-1]  # return the most recent cash flow statement for now
+    return None
 
   
 def __main__():

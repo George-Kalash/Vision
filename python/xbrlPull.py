@@ -16,6 +16,7 @@ def xbrl_for_years(ticker: str, years_back: int = 3, forms=("10-K","10-Q")):
         yield filing, xb
 
 # Example usage:
+bs_df = None
 for filing, xb in xbrl_for_years("AAPL", years_back=3, forms=("10-K","10-Q")):
     # Access common statements, or convert to DataFrame
     bs_df  = xb.statements.balance_sheet().to_dataframe()
