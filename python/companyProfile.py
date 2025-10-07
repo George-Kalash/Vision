@@ -44,6 +44,13 @@ set_identity(SEC_UA) # type: ignore
 
 
 # Implementations of the Enterprize class
+
+def stitchStatements(stmts: list) -> pd.DataFrame | None:
+  if not stmts:
+    return None
+  stmts_df = pd.concat(stmts, ignore_index=True)
+  return stmts_df
+
 class Enterprize: 
   def __init__ (self, ticker: str) -> None:
     self.ticker = ticker
@@ -90,18 +97,21 @@ class Enterprize:
   @property
   def getCompanyFacts(self):
     return self.SECcompany.get_facts()
-  
-  def getFilings(self, *, filingType="10-Q", periods=5, stmtType="IS"):
+
+  def getFilings(self: "Enterprize", *, filingType: str = "10-Q", periods: int = 5, stmtType: str = "IS") -> list | str | None:
 
     if filingType not in ["10-Q", "10-K", "8-K"]:
-      return "Wrong filing type"
+      print("Wrong filing type")
+      return None
+    stmt = None
     match stmtType:
       case "IS":
-        return self.getIncomeStatements(filingType=filingType, periods=periods)
+        stmt = self.getIncomeStatements(filingType=filingType, periods=periods)
       case "BS":
-        return self.getBalanceSheets(filingType=filingType, periods=periods)
+        stmt = self.getBalanceSheets(filingType=filingType, periods=periods)
       case "CF":
-        return self.getCashFlowStatement(filingType=filingType, periods=periods)
+        stmt = self.getCashFlowStatement(filingType=filingType, periods=periods)
+    return stitchStatements(stmt) # type: ignore
   
   def getIncomeStatements(self, *, filingType: str = "10-K", periods: int = 5, shouldPrint: bool = False) -> list | None:
     is_list = []
@@ -109,7 +119,7 @@ class Enterprize:
       is_ = getStatementXBRL(self.ticker, filingType, "IS", year=i)
       is_ = is_.income_statement() if is_ else None
       if is_:
-        is_list.append(is_)
+        is_list.append(is_.to_dataframe())
         if shouldPrint:
           print(is_)
     if is_list:
@@ -122,7 +132,7 @@ class Enterprize:
       bs = getStatementXBRL(self.ticker, filingType, "BS", year=i)
       bs = bs.balance_sheet() if bs else None
       if bs:
-        bs_list.append(bs)
+        bs_list.append(bs.to_dataframe())
         if shouldPrint:
           print(bs)
     if bs_list:
@@ -139,15 +149,16 @@ class Enterprize:
         if shouldPrint:
           print(cf)
     if cf_list:
-      return cf_list 
+      return cf_list
     return None
 
-  
+
+
 def __main__():
-  company = Enterprize('U')
+  company = Enterprize('MSFT')
+  stmt = company.getFilings(filingType="10-K", stmtType="IS")
 
-
-  
+  print(stmt)
   
   
 __main__()

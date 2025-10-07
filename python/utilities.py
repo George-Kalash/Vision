@@ -19,7 +19,7 @@ def _quarter_bounds(year: int, quarter: int) -> tuple[str, str]:
 
 def listRecentFilings(ticker: str = "AAPL", form: str = "10-Q", count: int = 5):
     co = Company(ticker)
-    filings = co.get_filings(form=form, is_xbrl=True).head(count)
+    filings = co.get_filings(form=form, is_xbrl=True, amendments=True).head(count)
     print(f"Recent {form} filings for {ticker}:")
     for filing in filings:
         print(f"  - {filing.filing_date}: {filing.form} - {filing.accession_number}")
@@ -31,8 +31,10 @@ def getStatementXBRL(ticker: str = "AAPL", form: str = "10-K", statement: str = 
     #statement = IS - income stmt, CF - cashflow stmt, BS - balance sheet
     
     co = Company(ticker)
-    filings = co.get_filings(form=form, is_xbrl=True) 
-    
+    filings = co.get_filings(form=form, is_xbrl=True, amendments=True)
+    if filings.empty:
+        return None
+
     # If no year/quarter specified, get the latest filing
     if year is None and quarter is None:
         filing = filings.latest()
