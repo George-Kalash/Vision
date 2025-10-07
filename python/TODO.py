@@ -1,4 +1,6 @@
-# TODO: Implement stitching of the financial statements over multiple periods
+# ✅ DONE: Implement stitching of the financial statements over multiple periods
+
+
 # TODO: Add error handling for network issues and invalid tickers? 
 # TODO: Implement ratio calculations for financial analysis
 # TODO: Find a way to accurately identify comparable companies for benchmarking (e.g., by industry, size, geography, business model)
