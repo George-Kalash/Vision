@@ -1,3 +1,5 @@
+# companyProfile.py
+
 from datetime import date
 import re
 from utilities import getStatementXBRL
@@ -37,10 +39,11 @@ except ImportError:
   print("✗ pandas not found. Install with: pip install pandas")
   exit(1)
 
-
 SEC_UA = "your.email@example.com"  
 set_identity(SEC_UA) # type: ignore
-  
+
+
+# Implementations of the Enterprize class
 class Enterprize: 
   def __init__ (self, ticker: str) -> None:
     self.ticker = ticker
@@ -70,7 +73,7 @@ class Enterprize:
     return f"Enterprize(ticker='{self.ticker}', name='{self.name}', market_cap={self.market_cap})"
     
   @property
-  def liveQuote(self):
+  def latestPrice(self):
     """Get current price from most recent data (not websocket stream)"""
     try:
       fast_info = self.company.fast_info
@@ -88,60 +91,62 @@ class Enterprize:
   def getCompanyFacts(self):
     return self.SECcompany.get_facts()
   
-  @property
-  def getFilings(self, filingType="10Q", periods=5, stmtType="IS"):
+  def getFilings(self, *, filingType="10-Q", periods=5, stmtType="IS"):
 
-    if filingType not in ["10Q", "10K", "8K"]:
+    if filingType not in ["10-Q", "10-K", "8-K"]:
       return "Wrong filing type"
     match stmtType:
       case "IS":
-        return self.getIncomeStatements(self, filingType, periods) # type: ignore
+        return self.getIncomeStatements(filingType=filingType, periods=periods)
       case "BS":
-        return self.getBalanceSheets()  # type: ignore
+        return self.getBalanceSheets(filingType=filingType, periods=periods)
       case "CF":
-        return self.getCashFlowStatement()  # type: ignore
+        return self.getCashFlowStatement(filingType=filingType, periods=periods)
   
-  @property
-  def getIncomeStatements(self, filingType="10Q", periods=5):
+  def getIncomeStatements(self, *, filingType: str = "10-K", periods: int = 5, shouldPrint: bool = False) -> list | None:
     is_list = []
     for i in range(date.today().year - periods, date.today().year + 1):
       is_ = getStatementXBRL(self.ticker, filingType, "IS", year=i)
+      is_ = is_.income_statement() if is_ else None
       if is_:
         is_list.append(is_)
+        if shouldPrint:
+          print(is_)
     if is_list:
-      # add stitching logic later
-      return is_list[-1]  # return the most recent income statement for now
+      return is_list  
     return None
   
-  @property
-  def getBalanceSheets(self, filingType="10Q", periods=5):
+  def getBalanceSheets(self, *, filingType: str = "10-K", periods: int = 5, shouldPrint: bool = False) -> list | None:
     bs_list = []
     for i in range(date.today().year - periods, date.today().year + 1):
       bs = getStatementXBRL(self.ticker, filingType, "BS", year=i)
+      bs = bs.balance_sheet() if bs else None
       if bs:
         bs_list.append(bs)
+        if shouldPrint:
+          print(bs)
     if bs_list:
-      # add stitching logic later
-      return bs_list[-1]  # return the most recent balance sheet for now
+      return bs_list  
     return None
 
-  @property
-  def getCashFlowStatement(self, filingType="10Q", periods=5):
+  def getCashFlowStatement(self, *, filingType: str = "10-K", periods: int = 5, shouldPrint: bool = False) -> list | None:
     cf_list = []
     for i in range(date.today().year - periods, date.today().year + 1):
       cf = getStatementXBRL(self.ticker, filingType, "CF", year=i)
+      cf = cf.cashflow_statement() if cf else None
       if cf:
-        cf_list.append(cf)
+        cf_list.append(cf.to_dataframe())
+        if shouldPrint:
+          print(cf)
     if cf_list:
-      # add stitching logic later
-      return cf_list[-1]  # return the most recent cash flow statement for now
+      return cf_list 
     return None
 
   
 def __main__():
   company = Enterprize('U')
-  print(company.getHistoricalData)
-  print(company.SECcompany.balance_sheet().to_dataframe())
+
+
   
   
   
