@@ -48,7 +48,12 @@ set_identity(SEC_UA) # type: ignore
 def stitchStatements(stmts: list) -> pd.DataFrame | None:
   if not stmts:
     return None
+  stmts = [s for s in stmts if s is not None]
+  if not stmts:
+    return None
   stmts_df = pd.concat(stmts, ignore_index=True)
+  stmts_df = stmts_df.drop(columns=['level', 'abstract', 'dimension'], errors='ignore', axis=1)
+  stmts_df = smart_column_sort(stmts_df)
   return stmts_df
 
 class Enterprize: 
@@ -152,11 +157,52 @@ class Enterprize:
       return cf_list
     return None
 
+def smart_column_sort(df, newest_first=True):
+  date_cols = []
+  other_cols = []
+  
+  for col in df.columns:
+      col_str = str(col)
+      
+      date_patterns = [
+          r'(\d{4}[-_]\d{2}[-_]\d{2})',  # YYYY-MM-DD
+          r'(\d{4}[-_]Q[1-4])',          # YYYY-Q1
+          r'(\d{4})',                    # YYYY (if 4 digits)
+          r'(\d{2}[-_]\d{2}[-_]\d{4})',  # MM-DD-YYYY
+      ]
+      
+      found_date = False
+      for pattern in date_patterns:
+          match = re.search(pattern, col_str)
+          if match:
+              try:
+                  if 'Q' in match.group(1):
+                      # Handle quarterly
+                      year, quarter = re.search(r'(\d{4})[-_]Q([1-4])', match.group(1)).groups()
+                      date_obj = pd.to_datetime(f'{year}-{int(quarter)*3:02d}-01')
+                  else:
+                      date_obj = pd.to_datetime(match.group(1))
+                  
+                  date_cols.append((col, date_obj))
+                  found_date = True
+                  break
+              except:
+                  continue
+      
+      if not found_date:
+          other_cols.append(col)
+  
+  # Sort date columns
+  date_cols.sort(key=lambda x: x[1], reverse=newest_first)
+  sorted_date_cols = [col[0] for col in date_cols]
+  
+  return df[other_cols + sorted_date_cols]
+
 
 
 def __main__():
   company = Enterprize('MSFT')
-  stmt = company.getFilings(filingType="10-K", stmtType="IS")
+  stmt = company.getFilings(filingType="10-K", stmtType="IS", periods=12)
 
   print(stmt)
   
