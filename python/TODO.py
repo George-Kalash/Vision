@@ -1,4 +1,5 @@
 # ✅ DONE: Implement stitching of the financial statements over multiple periods
+# ✅ DONE: Implemented cleaning of financial statements to remove duplicates data and combines rows with same concept
 
 
 # TODO: Add error handling for network issues and invalid tickers? 

@@ -22,7 +22,7 @@ def strip_first_last_lines(input_file, output_file=None):
   else:
     print("File has too few lines to strip")
 
-prompt = 'Given the following financial statement, segregate every row by proper concept ie if there is two rows that have the same intrinsic meaning but different titles make sure to collect them under the same title, as would revenue and gross sales would usually mean the same. Make sure to not oversimplify, only combine what should and would be combined by the analysts looking. NaN can be overriden by any relevant number: \nPlease return it in the same table format. Always keep your json responce to the same format as provided in JSON schema do not alter the keys or structure. '
+prompt = 'Given the following financial statement, segregate every row by proper concept ie if there is two rows that have the same intrinsic meaning but different titles make sure to collect them under the same title, as would revenue and gross sales would usually mean the same. Make sure to not oversimplify, only combine what should and would be combined by the analysts looking. NaN can be overriden by any relevant number: \nPlease return it in the same table format. Always keep your json responce to the same format as provided in JSON schema do not alter the keys or structure. Assign rows based on the us-gaap concept taxonomy.'
 
 
 def main():
