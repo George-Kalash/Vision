@@ -9,3 +9,4 @@ edgar>=5.0.0
 pandas>=2.0.0
 # googlefinance>=0.7
 yfinance>=0.2.66
+google-genai

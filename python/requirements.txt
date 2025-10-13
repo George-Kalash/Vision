@@ -3,3 +3,5 @@ edgartools
 pandas
 yahooquery
 yahooquery[premium]
+google-genai
+dotenv
