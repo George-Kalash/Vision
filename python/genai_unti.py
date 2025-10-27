@@ -9,7 +9,8 @@ load_dotenv()
 def normalize_column_name(name: str, json_file) -> str:
   GEMINI_API_KEY = 'YOU API KEY HERE'
   client = genai.Client(api_key=os.getenv("GEMINI_API_KEY", "api_key_not_set"))
-  prompt = 'Given the following financial statement, segregate every row by proper concept ie if there is two rows that have the same intrinsic meaning but different titles make sure to collect them under the same title, as would revenue and gross sales would usually mean the same. Make sure to not oversimplify, only combine what should and would be combined by the analysts looking. NaN can be overriden by any relevant number: \nPlease return it in the same table format. Always keep your json responce to the same format as provided in JSON schema do not alter the keys or structure. Assign rows based on the us-gaap concept taxonomy.'
+  with open("prompt.txt", "r") as f:
+    prompt = f.read()
   model = "gemini-2.5-flash"
   response = client.models.generate_content(
     model=model,

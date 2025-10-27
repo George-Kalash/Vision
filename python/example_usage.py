@@ -27,13 +27,13 @@ def strip_first_last_lines(input_file, output_file=None):
 
 def main():
     
-  company = Enterprize('MU')
+  company = Enterprize('SBUX')
   stmt = company.getFilings(filingType="10-K", stmtType="IS", periods=10)
   print(f"title: {company.name} ({company.ticker})")
   print(stmt)
   stmt_json = stmt.to_json(index=False) # type: ignore
   response = normalize_column_name("MU", stmt_json)
-  print(response)
+  # print(response)
   json_data = response
   
   # Write the JSON response to a file

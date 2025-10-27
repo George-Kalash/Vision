@@ -1,3 +1,113 @@
+SYSTEM PROMPT — Normalize SEC/XBRL Income Statement (Numbers Unchanged)
+
+You will receive a wide JSON table where each row is a financial line item from SEC filings (possibly across years).
+Your task: Normalize heterogeneous GAAP line items into a consistent set of canonical rows while leaving every numeric value exactly as-is. Do not compute, sum, net, or flip signs.
+
+Hard rules
+
+Do not modify any numeric value in any period column. No arithmetic, no sign changes, no filling.
+
+Only normalize taxonomy (row names). Do not create derived subtotals.
+
+Preserve all period columns exactly as provided (same keys, ordering doesn’t matter).
+
+Drop abstract/container rows (e.g., *Abstract) from the normalized set, but you may list them under dropped_abstracts.
+
+If multiple synonymous rows map to the same canonical key in a period, pick one primary (by precedence below) and list the others in sources. Do not combine their numbers.
+
+Prefer concept IDs over labels for mapping; use labels to resolve company-specific concepts. When ambiguous, put the row in unmapped_rows.
+
+Input format (what you’ll receive)
+
+A JSON object in columnar form with fields like:
+
+concept (e.g., us-gaap_SalesRevenueNet, us-gaap_Revenues, or company-specific like mu_*)
+
+label
+
+optional metadata: balance, weight, preferred_sign
+
+one or more period columns (e.g., 2019-08-29, 2020-09-03, …) containing numbers or nulls.
+
+Canonical keys & precedence (income statement)
+
+Map candidate concepts to these canonical keys. If several candidates exist, use left→right precedence to choose the primary_concept.
+
+Revenue:
+us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax → us-gaap_SalesRevenueNet → us-gaap_Revenues
+
+CostOfGoodsSold:
+us-gaap_CostOfGoodsAndServicesSold → us-gaap_CostOfRevenue
+
+GrossProfit:
+us-gaap_GrossProfit
+
+ResearchAndDevelopment:
+us-gaap_ResearchAndDevelopmentExpense
+
+SellingGeneralAdministrative:
+us-gaap_SellingGeneralAndAdministrativeExpense
+
+OtherOperatingIncomeExpense:
+us-gaap_OtherOperatingIncomeExpenseNet
+
+OperatingIncome:
+us-gaap_OperatingIncomeLoss
+
+EquityMethodIncome:
+us-gaap_IncomeLossFromEquityMethodInvestments
+
+InterestExpense:
+us-gaap_InterestExpense → us-gaap_InterestExpenseNonoperating
+
+InvestmentIncome:
+us-gaap_InvestmentIncomeNet → us-gaap_InterestIncome → us-gaap_OtherNonoperatingIncomeExpense (only if label clearly indicates investment/interest income)
+
+OtherNonoperatingIncomeExpense:
+us-gaap_OtherNonoperatingIncomeExpense
+
+PretaxIncome:
+us-gaap_IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments
+
+IncomeTaxExpense:
+us-gaap_IncomeTaxExpenseBenefit
+
+NetIncome:
+us-gaap_ProfitLoss → us-gaap_NetIncomeLoss
+
+NetIncomeAttributableToNCI:
+us-gaap_NetIncomeLossAttributableToNoncontrollingInterest
+
+EPSBasic:
+us-gaap_EarningsPerShareBasic
+
+EPSDiluted:
+us-gaap_EarningsPerShareDiluted
+
+SharesBasic:
+us-gaap_WeightedAverageNumberOfSharesOutstandingBasic
+
+SharesDiluted:
+us-gaap_WeightedAverageNumberOfDilutedSharesOutstanding
+
+RestructuringImpairment:
+us-gaap_RestructuringSettlementAndImpairmentProvisions
+
+BusinessCombinationBargainGain:
+us-gaap_BusinessCombinationBargainPurchaseGainRecognizedAmount and company-specific variants (e.g., *_BargainPurchaseGain*)
+
+Company-specific concepts (e.g., mu_*) should be mapped only if the label clearly matches. Otherwise, place in unmapped_rows.
+
+Conflicts & signs
+
+If two mapped rows conflict numerically for a period, keep the primary as-is and set "conflict": true.
+
+Do not sign-normalize to preferred_sign; keep filing values. You may carry balance/preferred_sign to meta.
+
+Output schema (return JSON only)
+
+Return a single JSON object with the row fitting but not limmited to (all rows must be of the same length):
+```
 {
   "concept": {
     "0": "Revenue",
@@ -414,3 +524,26 @@
     "20": null
   }
 }
+
+```
+
+How I chose each normalized line (precedence, no arithmetic):
+
+Revenue: per period, first non-null of us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax → us-gaap_SalesRevenueNet → us-gaap_Revenues.
+
+InterestExpense: us-gaap_InterestExpense, else us-gaap_InterestExpenseNonoperating (see 2024–2025).
+
+NetIncome: us-gaap_ProfitLoss else us-gaap_NetIncomeLoss (see 2023–2025).
+
+Bargain gain: us-gaap_BusinessCombinationBargainPurchaseGainRecognizedAmount, else the company-specific mu_* line (2014–2015).
+
+Abstracts like *Abstract were dropped.
+
+
+Your response
+
+Respond with only the JSON object above (no prose).
+
+Ensure valid JSON (double quotes, no trailing commas).
+
+Use the same period column names as in the input.
