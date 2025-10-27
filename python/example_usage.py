@@ -53,5 +53,4 @@ def main():
   print(df_from_string)
 
 if __name__ == "__main__":
-  # Given the following financial statement, segregate every row by proper concept ie if there is two rows that have the same intrinsic meaning but different titles make sure to collect them under the same title, as would revenue and gross sales would usually mean the same. Make sure to not oversimplify, only combine what should and would be combined by the analysts looking. NaN can be overriden by any relevant number:\n{stmt.to_markdown()}. Please return it in a markdown table format."}
   main() 
