@@ -41,6 +41,9 @@ def main():
     with open("response.json", "w") as f:
       f.write(json_data)
     print("Response saved to response.json")
+    with open("JSONed.json", "w") as f:
+      f.write(stmt_json)
+    print("JSONed statement saved to JSONed.json")
   else:
     print("No response data to save")
   strip_first_last_lines("response.json", "cleaned_response.json")
