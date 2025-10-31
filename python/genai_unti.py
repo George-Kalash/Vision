@@ -17,11 +17,3 @@ def normalize_column_name(name: str, json_file) -> str:
     contents=[prompt, json_file])# type: ignore
   return response.text
 
-# model_info = client.models.get(model="gemini-2.0-flash")
-
-# response = client.models.generate_content(
-#   model="gemini-2.0-flash",
-#   contents="Are you able to accept and receive a pd dataframe?"# type: ignore
-# )
-# print(response.text)
-# print(model_info)

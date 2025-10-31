@@ -51,6 +51,8 @@ def main():
   # # print(response)
   df_from_string = pd.read_json("cleaned_response.json")
   print(df_from_string)
+  df_from_string.to_csv("final_output.csv", index=False)
+  print("Final output saved to final_output.csv")
 
 if __name__ == "__main__":
   main() 
