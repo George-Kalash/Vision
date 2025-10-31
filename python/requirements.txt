@@ -5,3 +5,4 @@ yahooquery
 yahooquery[premium]
 google-genai
 dotenv
+duckdb
