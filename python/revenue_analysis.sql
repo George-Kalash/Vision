@@ -1,10 +1,8 @@
--- Load the CSV and isolate the Revenue row
 WITH revenue_row AS (
     SELECT *
     FROM read_csv_auto('final_output.csv', header = TRUE)
     WHERE concept = 'Revenue'
 ),
--- Turn the wide columns into (period, revenue) rows
 revenue_unpivot AS (
     SELECT period, CAST(revenue AS DOUBLE) AS revenue
     FROM revenue_row
@@ -14,7 +12,6 @@ revenue_unpivot AS (
         "2021-10-03", "2022-10-02", "2023-10-01", "2024-09-29"
     ))
 ),
--- Compute period-over-period change
 revenue_with_change AS (
     SELECT
         period,
