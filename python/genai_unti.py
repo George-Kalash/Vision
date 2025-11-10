@@ -1,19 +1,35 @@
-from google import genai
-from google.genai import types
 import os
+import time
 from dotenv import load_dotenv
+from google import genai
+from google.genai.errors import ServerError
+
 load_dotenv()
 
 
-
 def normalize_column_name(name: str, json_file) -> str:
-  GEMINI_API_KEY = 'YOU API KEY HERE'
-  client = genai.Client(api_key=os.getenv("GEMINI_API_KEY", "api_key_not_set"))
-  with open("prompt.txt", "r") as f:
+  api_key = os.getenv("GEMINI_API_KEY", "api_key_not_set")
+  client = genai.Client(api_key=api_key)
+  with open("prompt.txt", "r", encoding="utf-8") as f:
     prompt = f.read()
-  model = "gemini-2.5-flash"
-  response = client.models.generate_content(
-    model=model,
-    contents=[prompt, json_file])# type: ignore
-  return response.text
+  model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+  contents = [prompt, json_file]
+
+  for attempt in range(4):
+    try:
+      response = client.models.generate_content(
+        model=model,
+        contents=contents)  # type: ignore
+      text = getattr(response, "text", "")
+      return text or json_file
+    except ServerError as exc:
+      if getattr(exc, "status_code", None) == 503 and attempt < 3:
+        wait_for = 2 ** attempt
+        time.sleep(wait_for)
+        continue
+      return json_file
+    except Exception:
+      return json_file
+
+  return json_file
 

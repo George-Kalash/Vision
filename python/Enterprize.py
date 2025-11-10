@@ -52,22 +52,26 @@ class Enterprize:
     self.company = yf.Ticker(ticker)
     self.YQcompany = yq.Ticker(ticker, asynchronous=True)
     self.SECcompany = Company(ticker)
-    # Get static info once during initialization
-    self.name = self.company.info['shortName']
-    self.market_cap = self.company.info['marketCap']
-    self.industry = self.company.info["industry"]
-    self.sector = self.company.info['sector']
-    self.bid = self.company.info['bid']
-    self.ask = self.company.info['ask']
+    # Get static info once during initialization and tolerate sparse datasets
+    info = self.company.info or {}
+    self.name = info.get('shortName', ticker.upper())
+    self.market_cap = info.get('marketCap')
+    self.industry = info.get("industry")
+    self.sector = info.get('sector')
+    self.bid = info.get('bid')
+    self.ask = info.get('ask')
   
   def __str__(self):
     """String representation of the object"""
+    market_cap = f"${self.market_cap:,}" if isinstance(self.market_cap, (int, float)) else "N/A"
+    bid = f"${self.bid}" if isinstance(self.bid, (int, float)) else "N/A"
+    ask = f"${self.ask}" if isinstance(self.ask, (int, float)) else "N/A"
     return f"""Company: {self.name} ({self.ticker})
-    Market Cap: ${self.market_cap:,}
-    Industry: {self.industry}
-    Sector: {self.sector}
-    Bid: ${self.bid}
-    Ask: ${self.ask}"""
+    Market Cap: {market_cap}
+    Industry: {self.industry or 'N/A'}
+    Sector: {self.sector or 'N/A'}
+    Bid: {bid}
+    Ask: {ask}"""
   
   def __repr__(self):
     """Developer representation of the object"""

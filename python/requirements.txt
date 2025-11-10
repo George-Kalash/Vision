@@ -1,8 +1,9 @@
-yfinance
+duckdb
+dotenv
 edgartools
+flask
+google-genai
 pandas
 yahooquery
 yahooquery[premium]
-google-genai
-dotenv
-duckdb
+yfinance

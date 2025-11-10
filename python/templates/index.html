@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vision Income Statement Sandbox</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      background-color: #ffffff;
+      color: black;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+    }
+
+    main {
+      width: min(900px, 92vw);
+      background: white;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 22px 60px rgba(10, 12, 16, 0.55);
+      backdrop-filter: blur(16px);
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 1.9rem;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+    }
+
+    p.lead {
+      margin: 0 0 28px;
+      color: rgb(107 113 124 / 70%);
+      font-size: 0.95rem;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      color: rgb(107 113 124 / 70%);
+    }
+
+    input {
+      width: 90%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 2px solid black;
+      background: white;
+      color: inherit;
+      font-size: 1rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: rgba(59, 130, 246, 0.55);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    }
+
+    button {
+      background: #60a5fa;
+      border: none;
+      color: white;
+      font-weight: 600;
+      padding: 11px 18px;
+      border-radius: 10px;
+      border: black
+      <style>
+        :root {
+          font-family: "Inter", "Segoe UI", sans-serif;
+          color: #0a0a0a;
+          background-color: #f5f3ef;
+        }
+
+        body {
+          margin: 0;
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: #f5f3ef;
+          color: #0a0a0a;
+        }
+
+        main {
+          width: min(900px, 92vw);
+          background: #fffdf7;
+          border: 4px solid #0a0a0a;
+          border-radius: 18px;
+          padding: 40px;
+          box-shadow: 10px 10px 0 #0a0a0a;
+        }
+
+        h1 {
+          margin: 0 0 12px;
+          font-size: 2.25rem;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        p.lead {
+          margin: 0 0 32px;
+          color: #2f2f2f;
+          font-size: 1rem;
+          max-width: 48ch;
+        }
+
+        form {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 18px;
+          align-items: end;
+          margin-bottom: 28px;
+        }
+
+        label {
+          display: block;
+          font-size: 0.78rem;
+          font-weight: 600;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          margin-bottom: 8px;
+        }
+
+        input {
+          width: 100%;
+          padding: 12px 14px;
+          border-radius: 12px;
+          border: 3px solid #0a0a0a;
+          background: #f0eee5;
+          color: inherit;
+          font-size: 1rem;
+          box-shadow: 4px 4px 0 #0a0a0a;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        input:focus {
+          outline: none;
+          transform: translate(-2px, -2px);
+          box-shadow: 6px 6px 0 #0a0a0a;
+          background: #ffffff;
+        }
+
+        button {
+          background: #ff6b4a;
+          border: 3px solid #0a0a0a;
+          color: #0a0a0a;
+          font-weight: 700;
+          padding: 12px 20px;
+          border-radius: 14px;
+          cursor: pointer;
+          box-shadow: 6px 6px 0 #0a0a0a;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        button:disabled {
+          background: #d0d0d0;
+          color: #6b6b6b;
+          cursor: wait;
+          box-shadow: 4px 4px 0 #0a0a0a;
+        }
+
+        button:hover:not(:disabled) {
+          transform: translate(-3px, -3px);
+          box-shadow: 9px 9px 0 #0a0a0a;
+        }
+
+        #status {
+          min-height: 24px;
+          font-size: 0.95rem;
+          color: #ff6b4a;
+          font-weight: 600;
+          margin-bottom: 18px;
+        }
+
+        section#results {
+          display: none;
+        }
+
+        section#results.active {
+          display: block;
+        }
+
+        .meta {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          gap: 18px;
+          margin-bottom: 18px;
+        }
+
+        .meta h2 {
+          margin: 0;
+          font-size: 1.6rem;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .meta span {
+          font-size: 0.95rem;
+          color: #2f2f2f;
+          font-weight: 600;
+        }
+
+        .tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: #7cfc9a;
+          border: 3px solid #0a0a0a;
+          color: #0a0a0a;
+          padding: 6px 12px;
+          border-radius: 999px;
+          font-size: 0.8rem;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          box-shadow: 4px 4px 0 #0a0a0a;
+        }
+
+        .note {
+          margin: 0 0 12px;
+          font-size: 0.85rem;
+          color: #d7263d;
+          font-weight: 600;
+        }
+
+        .table-wrap {
+          overflow-x: auto;
+          border-radius: 18px;
+          border: 4px solid #0a0a0a;
+          background: #faf7ef;
+          max-height: 460px;
+          overflow-y: auto;
+          box-shadow: 10px 10px 0 #0a0a0a;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          white-space: nowrap;
+        }
+
+        thead th {
+          position: sticky;
+          top: 0;
+          background: #ffef5c;
+          text-align: left;
+          padding: 14px 18px;
+          font-size: 0.82rem;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          border-bottom: 3px solid #0a0a0a;
+        }
+
+        tbody td {
+          padding: 12px 18px;
+          border-bottom: 2px solid #0a0a0a;
+          border-right: 2px solid #0a0a0a;
+          font-size: 0.95rem;
+          background: #fffdf7;
+        }
+
+        tbody tr:nth-child(even) td {
+          background: #f5f0e4;
+        }
+
+        tbody tr td:first-child {
+          border-left: 2px solid #0a0a0a;
+        }
+
+        .empty {
+          color: #787878;
+          font-style: italic;
+        }
+      </style>
+          const td = document.createElement("td");
+          const value = row[col];
+          if (value === null || value === undefined || value === "") {
+            td.textContent = "--";
+            td.classList.add("empty");
+          } else {
+            td.textContent = typeof value === "number" ? value.toLocaleString() : value;
+          }
+          tr.appendChild(td);
+        });
+        tableBody.appendChild(tr);
+      });
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      resetView();
+      const ticker = form.ticker.value.trim().toUpperCase();
+      let years = parseInt(form.years.value, 10);
+      if (Number.isNaN(years)) years = 10;
+      years = Math.min(Math.max(years, 1), 10);
+      submitBtn.disabled = true;
+      statusLine.textContent = `Loading ${ticker} ...`;
+      try {
+        const response = await fetch("/api/income-statement", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ticker, years })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Unexpected error");
+        }
+        statusLine.textContent = "";
+        title.textContent = `${data.company.name} (${data.company.ticker})`;
+        if (Number.isFinite(data.company.latestPrice)) {
+          priceFlag.textContent = `Last price: $${Number(data.company.latestPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+        } else {
+          priceFlag.textContent = "";
+        }
+        normalizationFlag.hidden = !data.normalized;
+        renderTable(data.columns, data.rows);
+        if (data.note) {
+          note.hidden = false;
+          note.textContent = `Normalization fallback: ${data.note}`;
+        }
+        results.classList.add("active");
+      } catch (error) {
+        console.error(error);
+        statusLine.textContent = error.message || "Failed to fetch statement.";
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

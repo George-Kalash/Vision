@@ -1,7 +1,7 @@
 WITH revenue_row AS (
     SELECT *
-    FROM read_csv_auto('final_output.csv', header = TRUE)
-    WHERE concept = 'Revenue'
+    FROM read_csv_auto('final_output.csv', header = TRUE) AS f
+    WHERE f."concept" = 'Revenue'
 ),
 revenue_unpivot AS (
     SELECT period, CAST(revenue AS DOUBLE) AS revenue
