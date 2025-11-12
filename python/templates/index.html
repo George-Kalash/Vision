@@ -88,6 +88,7 @@
           border: 3px solid #0a0a0a;
           background: #f0eee5;
           color: inherit;
+          text-transform: uppercase;
           font-size: 1rem;
           box-shadow: 5px 5px 0 #0a0a0a;
           transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -122,14 +123,6 @@
         button:hover:not(:disabled) {
           transform: translate(-3px, -3px);
           box-shadow: 11px 11px 0 #0a0a0a;
-        }
-
-        #status {
-          min-height: 24px;
-          font-size: 0.95rem;
-          color: #ff6b4a;
-          font-weight: 700;
-          margin-bottom: 20px;
         }
 
         section#results {
@@ -204,13 +197,15 @@
         thead th {
           position: sticky;
           top: 0;
-          background: #ffef5c;
+          background: #323037;
           text-align: left;
           padding: 15px 20px;
+          color: white;
           font-size: 0.84rem;
           letter-spacing: 0.06em;
           text-transform: uppercase;
           border-bottom: 3px solid #0a0a0a;
+          border-right: 2px solid #000;
         }
 
         tbody td {
@@ -252,14 +247,13 @@
             <button type="submit">Fetch Statement</button>
           </div>
         </form>
-        <div id="status"></div>
         <section id="results">
           <div class="meta">
             <h2 id="company-title"></h2>
             <span id="normalization-flag" class="tag" hidden>Normalized</span>
             <span id="price-flag"></span>
           </div>
-          <p id="note" class="note" hidden></p>
+          <p id="note" class="note" hidden style="display: none"></p>
           <div class="table-wrap">
             <table id="result-table">
               <thead></thead>
@@ -270,7 +264,6 @@
       </main>
       <script>
         const form = document.getElementById("statement-form");
-        const statusLine = document.getElementById("status");
         const results = document.getElementById("results");
         const title = document.getElementById("company-title");
         const normalizationFlag = document.getElementById("normalization-flag");
@@ -281,7 +274,6 @@
         const submitBtn = form.querySelector("button[type='submit']");
 
         function resetView() {
-          statusLine.textContent = "";
           results.classList.remove("active");
           title.textContent = "";
           normalizationFlag.hidden = true;
@@ -338,7 +330,6 @@
           if (Number.isNaN(years)) years = 10;
           years = Math.min(Math.max(years, 1), 10);
           submitBtn.disabled = true;
-          statusLine.textContent = `Loading ${ticker} ...`;
           try {
             const response = await fetch("/api/income-statement", {
               method: "POST",
@@ -349,7 +340,6 @@
             if (!response.ok) {
               throw new Error(data.error || "Unexpected error");
             }
-            statusLine.textContent = "";
             title.textContent = `${data.company.name} (${data.company.ticker})`;
             if (Number.isFinite(data.company.latestPrice)) {
               priceFlag.textContent = `Last price: $${Number(data.company.latestPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
@@ -365,7 +355,6 @@
             results.classList.add("active");
           } catch (error) {
             console.error(error);
-            statusLine.textContent = error.message || "Failed to fetch statement.";
           } finally {
             submitBtn.disabled = false;
           }
