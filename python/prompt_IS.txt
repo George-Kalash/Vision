@@ -1,0 +1,130 @@
+# Financial Statement Normalization Task
+
+You are an expert financial data analyst. Your task is to normalize stitched financial statements from different years into a single, standardized table.
+
+## Input
+You will receive a JSON object containing financial statement data with:
+- Multiple years/periods (can be quarterly or annual)
+- Line items that may have different names but represent the same financial concept
+- Potentially messy structure with inconsistent naming conventions
+
+## Required Output Structure
+
+Return a SINGLE JSON object with these columns and NO additional context breakdown:
+- `concept`: Standardized GAAP concept name (e.g., "Revenue", "CostOfGoodsSold")
+- `label`: Human-readable label (e.g., "Revenue", "Cost of Goods Sold")  
+- `balance`: null for all income statement items
+- Period columns: One column for each time period with actual values
+
+Example structure:
+```json
+{
+  "concept": {"0": "Revenue", "1": "CostOfGoodsSold", ...},
+  "label": {"0": "Revenue", "1": "Cost of Goods Sold", ...},
+  "balance": {"0": null, "1": null, ...},
+  "2019-09-30": {"0": "26.50B", "1": "-20.77B", ...},
+  "2020-09-30": {"0": "23.61B", "1": "-20.32B", ...},
+  ...
+}
+```
+
+## Critical Requirements
+
+### REQUIRED ROWS (Must be present in this order):
+1. Revenue (Total revenue, Net revenues, Sales, etc.)
+2. CostOfGoodsSold (Cost of sales, Cost of goods sold, etc.)
+3. GrossProfit
+4. OperatingIncome (Operating profit, Income from operations, etc.)
+5. ResearchAndDevelopment (R&D expense, Research and development, etc.)
+6. SellingGeneralAdministrative (SG&A, Operating expenses, etc.)
+7. OtherOperatingIncomeExpense
+8. EquityMethodIncome (Equity in earnings, etc.)
+9. InterestExpense
+10. InterestIncome (Investment income, etc.)
+11. OtherNonoperatingIncomeExpense
+12. PretaxIncome (Income before tax, Pretax income, etc.)
+13. IncomeTaxExpense (Tax expense, Provision for income taxes, etc.)
+14. NetIncome (Net profit, Net earnings, Profit for the period, etc.)
+15. NetIncomeAttributableToNCI (Noncontrolling interest, Minority interest, etc.)
+16. EPSBasic (Basic earnings per share, Basic EPS, etc.)
+17. EPSDiluted (Diluted earnings per share, Diluted EPS, etc.)
+18. SharesBasic (Weighted average shares basic, Shares outstanding basic, etc.)
+19. SharesDiluted (Weighted average shares diluted, etc.)
+20. EBITDA (if present)
+21. EBIT (if present)
+22. RestructuringImpairment (if present)
+23. Any other relevant line items found
+
+### Value Extraction Rules
+
+**CRITICAL: Every required row MUST contain valid numbers from the source table. No calculations, no modifications, only direct extraction.**
+
+1. **Direct Extraction Only**: Copy values EXACTLY as they appear in source (including B, M, K suffixes and negative signs)
+2. **No Modifications**: Never change, calculate, or transform values
+3. **Row Matching**: Use GAAP concept matching to identify rows with different names but same meaning
+   - Example: "Total revenue", "Net revenues", "Sales" all map to → Revenue
+   - Example: "Net profit", "Net income", "Profit for the period" all map to → NetIncome
+4. **Best Fit Selection**: When multiple source rows could map to same concept, pick the one that best fits the standardized concept
+5. **Preserve Unmatched Rows**: Add any source rows that weren't matched to required rows at the end of the output (rows 20+)
+6. **Missing Data**: Use "-" for periods where data is not available (not "0.00", "NaN", or null)
+7. **Ignore Growth Rates**: Only extract absolute values, ignore YoY% or any growth calculations
+
+### Handling Messy Data
+
+- Source tables may have inconsistent column names (Q1'23, 2023-Q1, 1Q23, etc.) - normalize to consistent format
+- Line items may appear in different order across periods - you must find and align them correctly
+- Some rows may be labeled differently but represent the same concept (use GAAP knowledge)
+- Hierarchical relationships may be implied (parent rows vs detail rows) - extract the appropriate level
+
+### Validation & Error Reporting
+
+After the main normalized table, add a `validation_errors` key with a list of issues found:
+```json
+{
+  ...normalized data...,
+  "validation_errors": {
+    "2022-09-30": [
+      "Revenue minus COGS does not equal Gross Profit (37.16B - 31.08B ≠ 6.08B)",
+      "Operating Income calculation mismatch"
+    ],
+    "2023-09-30": [
+      "Net Income does not match Pretax Income minus Tax Expense"
+    ]
+  }
+}
+```
+
+Validate these mathematical relationships:
+- Gross Profit = Revenue - COGS
+- Operating Income = Gross Profit - Operating Expenses
+- Net Income = Pretax Income - Income Tax Expense
+- Diluted EPS = Net Income / Diluted Shares Outstanding
+
+## Examples
+
+### Input (simplified):
+```json
+{
+  "rows": [
+    {"label": "Total revenues", "2023": "37.16B", "2024": "39.00B"},
+    {"label": "Cost of sales", "2023": "-31.08B", "2024": "-32.50B"},
+    {"label": "Net profit", "2023": "1.86B", "2024": "2.10B"}
+  ]
+}
+```
+
+### Output:
+```json
+{
+  "concept": {"0": "Revenue", "1": "CostOfGoodsSold", "2": "NetIncome"},
+  "label": {"0": "Total revenues", "1": "Cost of sales", "2": "Net profit"},
+  "balance": {"0": null, "1": null, "2": null},
+  "2023-09-30": {"0": "37.16B", "1": "-31.08B", "2": "1.86B"},
+  "2024-09-30": {"0": "39.00B", "1": "-32.50B", "2": "2.10B"},
+  "validation_errors": {}
+}
+```
+
+## Your Task
+
+Given the source financial statement JSON, produce a normalized output of the said JSON table following all rules above. Remember: **every required row must have actual values from the source - no fabrication, no calculation, only extraction, NO additional context outside the JSON, you MUST only return the JSON.

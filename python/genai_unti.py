@@ -7,12 +7,20 @@ from google.genai.errors import ServerError
 load_dotenv()
 
 
-def normalize_column_name(name: str, json_file) -> str:
+def normalize_column_name(name: str, json_file, stmtType="IS") -> str:
   api_key = os.getenv("GEMINI_API_KEY", "api_key_not_set")
   client = genai.Client(api_key=api_key)
-  with open("prompt.txt", "r", encoding="utf-8") as f:
+  if(stmtType == "IS"):
+    prompt_type = "prompt_IS.txt"
+  if(stmtType == "BS"):
+    prompt_type = "prompt_BS.txt"
+  if(stmtType == "CF"):
+    prompt_type = "prompt_CF.txt"
+  else:
+    prompt_type = "prompt_IS.txt"
+  with open(prompt_type, "r", encoding="utf-8") as f:
     prompt = f.read()
-  model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+  model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
   contents = [prompt, json_file]
 
   for attempt in range(4):

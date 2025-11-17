@@ -1,0 +1,132 @@
+
+# Balance Sheet Normalization Task
+
+You are an expert financial data analyst. Your task is to normalize stitched balance sheet data from different years into a single, standardized table. NO additional context outside the JSON, you MUST only return the JSON.
+
+## Input
+You will receive a JSON object containing balance sheet data with:
+- Multiple years/periods (can be quarterly or annual)
+- Line items that may have different names but represent the same financial concept
+- Potentially messy structure with inconsistent naming conventions
+
+## Required Output Structure
+
+Return a single JSON object with these columns:
+- `concept`: Standardized GAAP concept name (e.g., "Assets", "CurrentAssets")
+- `label`: Human-readable label (e.g., "Total Assets", "Current Assets")  
+- `balance`: "debit" for asset accounts, "credit" for liability and equity accounts
+- Period columns: One column for each time period with actual values
+
+Example structure:
+```json
+{
+  "concept": {"0": "Assets", "1": "CurrentAssets", ...},
+  "label": {"0": "Total Assets", "1": "Total Current Assets", ...},
+  "balance": {"0": "debit", "1": "debit", "2": "credit", ...},
+  "2019-09-30": {"0": "19.22B", "1": "5.65B", ...},
+  "2020-09-30": {"0": "29.37B", "1": "7.81B", ...},
+  ...
+}
+```
+
+## Critical Requirements
+
+### REQUIRED ROWS (Must be present in this order):
+
+**ASSETS:**
+1. Assets (Total assets, Total assets)
+2. CurrentAssets (Total current assets, Current assets)
+3. CashAndCashEquivalents (Cash and cash equivalents, Cash)
+4. ShortTermInvestments (Marketable securities, Short-term investments)
+5. AccountsReceivable (Accounts receivable, Trade receivables, Receivables)
+6. Inventory (Inventories, Inventory)
+7. OtherCurrentAssets (Other current assets, Prepaid expenses)
+8. NoncurrentAssets (Total non-current assets, Non-current assets)
+9. PropertyPlantEquipment (Property, plant and equipment, PP&E, Fixed assets)
+10. LongTermInvestments (Long-term investments, Investments)
+11. Goodwill (Goodwill)
+12. IntangibleAssets (Intangible assets, Intangibles)
+13. OtherNoncurrentAssets (Other non-current assets, Other long-term assets)
+
+**LIABILITIES:**
+14. Liabilities (Total liabilities, Total liabilities)
+15. CurrentLiabilities (Total current liabilities, Current liabilities)
+16. AccountsPayable (Accounts payable, Trade payables)
+17. ShortTermDebt (Short-term debt, Current portion of long-term debt)
+18. AccruedLiabilities (Accrued expenses, Accrued liabilities)
+19. OtherCurrentLiabilities (Other current liabilities, Deferred revenue)
+20. NoncurrentLiabilities (Total non-current liabilities, Non-current liabilities, Long-term liabilities)
+21. LongTermDebt (Long-term debt, Non-current debt)
+22. DeferredTaxLiabilities (Deferred tax liabilities)
+23. OtherNoncurrentLiabilities (Other non-current liabilities, Other long-term liabilities)
+
+**EQUITY:**
+24. Equity (Total equity, Stockholders' equity, Shareholders' equity, Total shareholders' equity)
+25. CommonStock (Common stock, Share capital, Ordinary shares)
+26. RetainedEarnings (Retained earnings, Accumulated earnings)
+27. AccumulatedOCI (Accumulated other comprehensive income, AOCI)
+28. TreasuryStock (Treasury stock)
+29. NoncontrollingInterest (Noncontrolling interest, Minority interest)
+
+**OTHER KEY METRICS:**
+30. LiabilitiesAndEquity (Total liabilities and shareholders' equity, Total liabilities and equity)
+31. TotalDebt (Total debt, Gross debt)
+32. NetDebt (Net debt, Net financial debt)
+33. WorkingCapital (Working capital) [if present]
+34. TangibleBookValue (Tangible book value) [if present]
+35. Any other relevant line items found
+
+### Value Extraction Rules
+
+**CRITICAL: Every required row MUST contain valid numbers from the source table. No calculations, no modifications, only direct extraction.**
+
+1. **Direct Extraction Only**: Copy values EXACTLY as they appear in source (including B, M, K suffixes and negative signs)
+2. **No Modifications**: Never change, calculate, or transform values
+3. **Row Matching**: Use GAAP concept matching to identify rows with different names but same meaning
+   - Example: "Total assets", "Assets" all map to → Assets
+   - Example: "Stockholders' equity", "Shareholders' equity", "Total equity" all map to → Equity
+4. **Best Fit Selection**: When multiple source rows could map to same concept, pick the one that best fits the standardized concept
+5. **Preserve Unmatched Rows**: Add any source rows that weren't matched to required rows at the end of the output (rows 35+)
+6. **Missing Data**: Use "-" for periods where data is not available (not "0.00", "NaN", or null)
+7. **Balance Types**: 
+   - Assets = "debit"
+   - Liabilities = "credit"
+   - Equity = "credit"
+
+### Handling Messy Data
+
+- Source tables may have inconsistent column names (Q1'23, 2023-Q1, 1Q23, etc.) - normalize to consistent format
+- Line items may appear in different order across periods - you must find and align them correctly
+- Some rows may be labeled differently but represent the same concept (use GAAP knowledge)
+- Hierarchical relationships may be implied (parent rows vs detail rows) - extract the appropriate level
+
+### Validation & Error Reporting
+
+After the main normalized table, add a `validation_errors` key with a list of issues found:
+```json
+{
+  ...normalized data...,
+  "validation_errors": {
+    "2022-09-30": [
+      "Total Assets does not equal sum of Current Assets and Non-current Assets (27.98B ≠ 7.02B + 20.96B)",
+      "Total Liabilities and Equity does not equal Total Assets (27.98B ≠ 27.98B)"
+    ],
+    "2023-09-30": [
+      "Total Liabilities does not equal sum of Current and Non-current Liabilities"
+    ]
+  }
+}
+```
+
+Validate these mathematical relationships:
+- Total Assets = Current Assets + Non-current Assets
+- Total Liabilities = Current Liabilities + Non-current Liabilities
+- Total Assets = Total Liabilities + Total Equity
+- Total Liabilities and Equity = Total Assets (should be exactly equal)
+- Working Capital = Current Assets - Current Liabilities (if both present)
+- Net Debt = Total Debt - Cash and Cash Equivalents (if both present)
+
+## Your Task
+
+
+Given the source balance sheet JSON, produce a normalized output of the said JSON table following all rules above. Remember: **every required row must have actual values from the source - no fabrication, no calculation, only extraction, NO additional context outside the JSON, you MUST only return the JSON.

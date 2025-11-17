@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import time
 import logging
 from datetime import date, datetime
 from io import StringIO
 from typing import Any
+from pathlib import Path
 
 import pandas as pd
 from flask import Flask, jsonify, render_template, request
@@ -16,6 +18,12 @@ app.config["JSON_SORT_KEYS"] = False
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+CLEANED_RESPONSE_PATH = Path(__file__).with_name("cleaned_response.json")
+_MAX_NORMALIZE_ATTEMPTS = 5
+_NORMALIZE_BACKOFF_SECONDS = 1.5
+_FILE_POLL_INTERVAL = 0.5
 
 
 def _to_serializable(value: Any) -> Any:
@@ -35,28 +43,66 @@ def _to_serializable(value: Any) -> Any:
   return value
 
 
-def _try_normalize(ticker: str, df: pd.DataFrame) -> tuple[pd.DataFrame, bool, str]:
+def _cleaned_response_mtime() -> float:
   try:
-    stmt_json = df.to_json(index=False)
-    normalized_payload = normalize_column_name(ticker, stmt_json)
-    if not normalized_payload:
-      return df, False, ""
-    payload_str = str(normalized_payload).strip()
-    if not payload_str:
-      return df, False, ""
-    starts_with_json = payload_str[0] in {"{", "["}
-    if not starts_with_json:
-      return df, False, payload_str
+    return CLEANED_RESPONSE_PATH.stat().st_mtime
+  except FileNotFoundError:
+    return 0.0
+
+
+def _load_normalized_dataframe(payload: str) -> pd.DataFrame:
+  try:
+    normalized_df = pd.read_json(StringIO(payload))
+  except ValueError as exc:
+    raise ValueError("Failed to parse Gemini normalized response") from exc
+  if normalized_df is None or normalized_df.empty:
+    raise ValueError("Gemini normalization produced an empty table")
+  return normalized_df
+
+
+def _wait_for_cleaned_response(previous_mtime: float) -> pd.DataFrame:
+  while True:
     try:
-      normalized_df = pd.read_json(StringIO(payload_str))
-    except (ValueError, TypeError) as exc:
-      return df, False, f"Unable to parse normalized response: {exc}"
-    if normalized_df is None or normalized_df.empty:
-      return df, False, ""
-    return normalized_df, True, ""
-  except Exception as exc:  # noqa: BLE001
-    logger.warning("Normalization failed for %s: %s", ticker, exc)
-    return df, False, str(exc)
+      current_stat = CLEANED_RESPONSE_PATH.stat()
+    except FileNotFoundError:
+      current_stat = None
+    if current_stat and current_stat.st_mtime > previous_mtime:
+      payload = CLEANED_RESPONSE_PATH.read_text(encoding="utf-8").strip()
+      if not payload:
+        time.sleep(_FILE_POLL_INTERVAL)
+        continue
+      try:
+        return _load_normalized_dataframe(payload)
+      except ValueError:
+        time.sleep(_FILE_POLL_INTERVAL)
+        continue
+    time.sleep(_FILE_POLL_INTERVAL)
+
+
+def _try_normalize(ticker: str, df: pd.DataFrame) -> tuple[pd.DataFrame, bool, str]:
+  stmt_json = df.to_json(index=False)
+  last_error = ""
+
+  for attempt in range(1, _MAX_NORMALIZE_ATTEMPTS + 1):
+    try:
+      previous_mtime = _cleaned_response_mtime()
+      _ = normalize_column_name(ticker, stmt_json, stmtType="IS")
+      normalized_df = _wait_for_cleaned_response(previous_mtime)
+      return normalized_df, True, ""
+    except Exception as exc:  # noqa: BLE001
+      last_error = str(exc)
+      logger.info(
+        "Normalization attempt %s/%s failed for %s: %s",
+        attempt,
+        _MAX_NORMALIZE_ATTEMPTS,
+        ticker,
+        last_error,
+      )
+      if attempt < _MAX_NORMALIZE_ATTEMPTS:
+        delay = _NORMALIZE_BACKOFF_SECONDS * attempt
+        time.sleep(delay)
+
+  return df, False, last_error
 
 
 def _fetch_income_statement(ticker: str, years: int) -> tuple[pd.DataFrame, dict[str, Any], bool, str]:
