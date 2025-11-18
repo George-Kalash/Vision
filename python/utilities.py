@@ -238,3 +238,27 @@ def clean_financial_statement(df: pd.DataFrame) -> pd.DataFrame:
   return pd.DataFrame(df_cleaned)
 
 
+
+def strip_first_last_lines(input_file, output_file=None):
+  if output_file is None:
+    output_file = input_file  # Overwrite original
+  
+  with open(input_file, "r") as f:
+    lines = f.readlines()
+  
+  # Remove first and last lines
+  if len(lines) > 2:
+    stripped_lines = lines[1:-1]
+      
+    with open(output_file, "w") as f:
+      f.writelines(stripped_lines)
+    print(f"Stripped file saved to {output_file}")
+  else:
+    print("File has too few lines to strip")
+
+def truncate_large_numbers(value):
+    """Divide numbers > 1M by 10^6"""
+    if isinstance(value, (int, float)) and not pd.isna(value):
+        if abs(value) > 1_000_000:
+            return value / 1_000_000
+    return value

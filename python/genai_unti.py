@@ -29,14 +29,18 @@ def normalize_column_name(name: str, json_file, stmtType="IS") -> str:
         model=model,
         contents=contents)  # type: ignore
       text = getattr(response, "text", "")
+      print("Normalization successful ✅")
       return text or json_file
     except ServerError as exc:
       if getattr(exc, "status_code", None) == 503 and attempt < 3:
         wait_for = 2 ** attempt
         time.sleep(wait_for)
         continue
+      
+      print(f"Normalization failed with ServerError ❌: {exc}")
       return json_file
-    except Exception:
+    except Exception as exc:
+      print(f"Normalization failed with Exception ❌: {exc}")
       return json_file
 
   return json_file

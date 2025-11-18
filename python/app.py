@@ -6,11 +6,13 @@ from datetime import date, datetime
 from io import StringIO
 from typing import Any
 from pathlib import Path
+import json
 
 import pandas as pd
 from flask import Flask, jsonify, render_template, request
 
 from Enterprize import Enterprize
+from utilities import strip_first_last_lines, truncate_large_numbers
 from genai_unti import normalize_column_name
 
 app = Flask(__name__)
@@ -79,39 +81,48 @@ def _wait_for_cleaned_response(previous_mtime: float) -> pd.DataFrame:
     time.sleep(_FILE_POLL_INTERVAL)
 
 
-def _try_normalize(ticker: str, df: pd.DataFrame) -> tuple[pd.DataFrame, bool, str]:
-  stmt_json = df.to_json(index=False)
-  last_error = ""
-
-  for attempt in range(1, _MAX_NORMALIZE_ATTEMPTS + 1):
-    try:
-      previous_mtime = _cleaned_response_mtime()
-      _ = normalize_column_name(ticker, stmt_json, stmtType="IS")
-      normalized_df = _wait_for_cleaned_response(previous_mtime)
-      return normalized_df, True, ""
-    except Exception as exc:  # noqa: BLE001
-      last_error = str(exc)
-      logger.info(
-        "Normalization attempt %s/%s failed for %s: %s",
-        attempt,
-        _MAX_NORMALIZE_ATTEMPTS,
-        ticker,
-        last_error,
-      )
-      if attempt < _MAX_NORMALIZE_ATTEMPTS:
-        delay = _NORMALIZE_BACKOFF_SECONDS * attempt
-        time.sleep(delay)
-
-  return df, False, last_error
+def _try_normalize(ticker: str, df: pd.DataFrame, periods: int) -> tuple[pd.DataFrame, bool, str]:
+    """Normalize via Gemini and wait for cleaned_response.json."""
+    json_str = df.to_json(orient="records")
+    
+    # Trigger normalization
+    frame = normalize_column_name(ticker, json_str, stmtType="IS")
+    with open("response.json", "w") as f:
+        f.write(frame)
+    strip_first_last_lines("response.json", "cleaned_response.json")
+    
+    print("Stripped response saved to cleaned_response.json")
+    
+    # Wait for the file to appear and be readable
+    cleaned_path = Path("cleaned_response.json")
+    while True:
+        if cleaned_path.exists():
+            try:
+                with open(cleaned_path, "r") as f:
+                    cleaned_data = json.load(f)
+                if cleaned_data:  # Non-empty data found
+                    df = pd.DataFrame(cleaned_data).dropna(subset=['label'], how='all').reset_index(drop=True)
+                    normalized_df = df.drop(columns=['balance', "validation_errors"], errors='ignore')
+                    length = len(normalized_df.columns)
+                    if length > periods + 2:
+                      normalized_df = normalized_df.drop(normalized_df.columns[2:-periods-1], axis=1) # Drop excess columns from the end
+                    normalized_df = normalized_df.dropna(subset=normalized_df.columns[2:], how='all')
+                    normalized_df = normalized_df.applymap(truncate_large_numbers)
+                    print("Normalization successful ✅")
+                    return normalized_df, True, ""
+            except (json.JSONDecodeError, ValueError):
+                pass  # File not ready yet, keep waiting
+        time.sleep(0.5)
 
 
 def _fetch_income_statement(ticker: str, years: int) -> tuple[pd.DataFrame, dict[str, Any], bool, str]:
   years = max(1, min(years, 10))
   enterprise = Enterprize(ticker)
   statement_df = enterprise.getFilings(filingType="10-K", stmtType="IS", periods=years - 1)
+  print(statement_df)
   if statement_df is None or statement_df.empty:
     raise ValueError("No income statement data available for the requested range")
-  normalized_df, normalized, note = _try_normalize(ticker, statement_df.reset_index(drop=True))
+  normalized_df, normalized, note = _try_normalize(ticker, statement_df.reset_index(drop=True), years - 1)
   try:
     latest_price = enterprise.latestPrice
   except Exception:  # noqa: BLE001
