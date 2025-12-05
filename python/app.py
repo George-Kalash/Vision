@@ -7,6 +7,7 @@ from io import StringIO
 from typing import Any
 from pathlib import Path
 import json
+import shutil
 
 import pandas as pd
 from flask import Flask, jsonify, render_template, request
@@ -82,42 +83,60 @@ def _wait_for_cleaned_response(previous_mtime: float) -> pd.DataFrame:
 
 
 def _try_normalize(ticker: str, df: pd.DataFrame, periods: int) -> tuple[pd.DataFrame, bool, str]:
-    """Normalize via Gemini and wait for cleaned_response.json."""
-    json_str = df.to_json(orient="records")
-    
-    # Trigger normalization
-    frame = normalize_column_name(ticker, json_str, stmtType="IS")
-    with open("response.json", "w") as f:
-        f.write(frame)
-    strip_first_last_lines("response.json", "cleaned_response.json")
-    
-    print("Stripped response saved to cleaned_response.json")
-    
-    # Wait for the file to appear and be readable
-    cleaned_path = Path("cleaned_response.json")
-    while True:
-        if cleaned_path.exists():
-            try:
-                with open(cleaned_path, "r") as f:
-                    cleaned_data = json.load(f)
-                if cleaned_data:  # Non-empty data found
-                    df = pd.DataFrame(cleaned_data).dropna(subset=['label'], how='all').reset_index(drop=True)
-                    normalized_df = df.drop(columns=['balance', "validation_errors"], errors='ignore')
-                    length = len(normalized_df.columns)
-                    if length > periods + 2:
-                      normalized_df = normalized_df.drop(normalized_df.columns[2:-periods-1], axis=1) # Drop excess columns from the end
-                    normalized_df = normalized_df.dropna(subset=normalized_df.columns[2:], how='all')
-                    normalized_df = normalized_df.applymap(truncate_large_numbers)
-                    print("Normalization successful ✅")
-                    return normalized_df, True, ""
-            except (json.JSONDecodeError, ValueError):
-                pass  # File not ready yet, keep waiting
-        time.sleep(0.5)
+  """Normalize via Gemini and wait for cleaned_response.json."""
+  json_str = df.to_json(orient="records")
+  
+  # Trigger normalization
+  frame = normalize_column_name(ticker, json_str, stmtType="IS")
+  with open("response.json", "w") as f:
+    f.write(frame)
+  strip_first_last_lines("response.json", "cleaned_response.json")
+  
+  print("Stripped response saved to cleaned_response.json")
+  
+  cleaned_path = Path("cleaned_response.json")
+  while True:
+    if cleaned_path.exists():
+      try:
+        with open(cleaned_path, "r") as f:
+          cleaned_data = json.load(f)
+        if cleaned_data:  # Non-empty data found
+          df = pd.DataFrame(cleaned_data).dropna(subset=['label'], how='all').reset_index(drop=True)
+          normalized_df = df.drop(columns=['balance', "validation_errors"], errors='ignore')
+          length = len(normalized_df.columns)
+          if length > periods + 2:
+            normalized_df = normalized_df.drop(normalized_df.columns[2:-periods-1], axis=1) # Drop excess columns from the end
+          normalized_df = normalized_df.dropna(subset=normalized_df.columns[2:], how='all')
+          normalized_df = normalized_df.applymap(truncate_large_numbers)
+          print("Normalization successful ✅")
+          return normalized_df, True, ""
+      except (json.JSONDecodeError, ValueError):
+        pass  # File not ready yet, keep waiting
+    time.sleep(0.5)
+
+
+def _clear_edgar_cache():
+  """Clear edgartools HTTP cache to force fresh data fetch."""
+  cache_dir = Path.home() / ".cache" / "httpx-cache"
+  if cache_dir.exists():
+    try:
+      shutil.rmtree(cache_dir)
+      logger.info("Cleared edgartools cache")
+    except Exception as exc:
+      logger.warning("Failed to clear cache: %s", exc)
 
 
 def _fetch_income_statement(ticker: str, years: int) -> tuple[pd.DataFrame, dict[str, Any], bool, str]:
   years = max(1, min(years, 10))
-  enterprise = Enterprize(ticker)
+  try:
+    enterprise = Enterprize(ticker)
+  except Exception as exc:
+    if "data sources are unavailable" in str(exc).lower() or "304" in str(exc):
+      logger.info("Cache issue detected, clearing cache and retrying...")
+      _clear_edgar_cache()
+      enterprise = Enterprize(ticker)
+    else:
+      raise
   statement_df = enterprise.getFilings(filingType="10-K", stmtType="IS", periods=years - 1)
   print(statement_df)
   if statement_df is None or statement_df.empty:
@@ -180,7 +199,12 @@ def income_statement():
     return jsonify({"error": str(exc)}), 404
   except Exception as exc:  # noqa: BLE001
     logger.exception("Failed to build income statement for %s", ticker)
-    return jsonify({"error": str(exc)}), 500
+    error_msg = str(exc)
+    if "data sources are unavailable" in error_msg.lower():
+      error_msg = "SEC data sources are temporarily unavailable. Please try again in a few moments."
+    elif "cik" in error_msg.lower():
+      error_msg = f"Unable to find company data for ticker '{ticker}'. Please verify the ticker symbol."
+    return jsonify({"error": error_msg}), 500
 
 
 if __name__ == "__main__":

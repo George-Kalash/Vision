@@ -228,7 +228,28 @@
           color: #6f6f6f;
           font-style: italic;
         }
+
+        .chart-card {
+          background: #fffdf7;
+          border: 4px solid #0a0a0a;
+          border-radius: 16px;
+          padding: 20px;
+          box-shadow: 8px 8px 0 #0a0a0a;
+        }
+
+        .chart-card h3 {
+          margin: 0 0 16px;
+          font-size: 1.1rem;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+        }
+
+        .chart-card canvas {
+          max-height: 240px;
+        }
       </style>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     </head>
     <body>
       <main>
@@ -254,6 +275,8 @@
             <span id="price-flag"></span>
           </div>
           <p id="note" class="note" hidden style="display: none"></p>
+          <div id="charts-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 32px;">
+          </div>
           <div class="table-wrap">
             <table id="result-table">
               <thead></thead>
@@ -273,6 +296,9 @@
         const tableBody = document.querySelector("#result-table tbody");
         const submitBtn = form.querySelector("button[type='submit']");
 
+        const chartsContainer = document.getElementById("charts-container");
+        let chartInstances = [];
+
         function resetView() {
           results.classList.remove("active");
           title.textContent = "";
@@ -282,6 +308,9 @@
           note.textContent = "";
           tableHead.innerHTML = "";
           tableBody.innerHTML = "";
+          chartsContainer.innerHTML = "";
+          chartInstances.forEach(chart => chart.destroy());
+          chartInstances = [];
         }
 
         function renderTable(columns, rows) {
@@ -322,6 +351,74 @@
           });
         }
 
+        function renderCharts(columns, rows) {
+          const metricsToChart = [
+            { concept: "Revenue", label: "Revenue", color: "#ff6b4a" },
+            { concept: "OperatingIncome", label: "Operating Income", color: "#4a90ff" },
+            { concept: "EPSBasic", label: "EPS Basic", color: "#89ffa4" },
+            { concept: "NetIncome", label: "Net Income", color: "#ffd74a" }
+          ];
+
+          const yearColumns = columns.filter(col => 
+            col.toLowerCase() !== "concept" && 
+            col.toLowerCase() !== "label"
+          );
+
+          metricsToChart.forEach(metric => {
+            const row = rows.find(r => r.concept === metric.concept);
+            if (!row) return;
+
+            const values = yearColumns.map(col => {
+              const val = row[col];
+              return (val === null || val === undefined || val === "") ? null : Number(val);
+            });
+
+            const card = document.createElement("div");
+            card.className = "chart-card";
+
+            const heading = document.createElement("h3");
+            heading.textContent = metric.label;
+            card.appendChild(heading);
+
+            const canvas = document.createElement("canvas");
+            card.appendChild(canvas);
+            chartsContainer.appendChild(card);
+
+            const ctx = canvas.getContext("2d");
+            const chart = new Chart(ctx, {
+              type: "bar",
+              data: {
+                labels: yearColumns,
+                datasets: [{
+                  label: metric.label,
+                  data: values,
+                  backgroundColor: metric.color,
+                  borderColor: "#0a0a0a",
+                  borderWidth: 2
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                  legend: { display: false }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: false,
+                    ticks: {
+                      callback: function(value) {
+                        return value.toLocaleString();
+                      }
+                    }
+                  }
+                }
+              }
+            });
+            chartInstances.push(chart);
+          });
+        }
+
         form.addEventListener("submit", async (event) => {
           event.preventDefault();
           resetView();
@@ -348,6 +445,7 @@
             }
             normalizationFlag.hidden = !data.normalized;
             renderTable(data.columns, data.rows);
+            renderCharts(data.columns, data.rows);
             if (data.note) {
               note.hidden = false;
               note.textContent = `Normalization fallback: ${data.note}`;
@@ -355,6 +453,7 @@
             results.classList.add("active");
           } catch (error) {
             console.error(error);
+            alert(`Error: ${error.message}`);
           } finally {
             submitBtn.disabled = false;
           }
