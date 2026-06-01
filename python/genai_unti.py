@@ -20,7 +20,7 @@ def normalize_column_name(name: str, json_file, stmtType="IS") -> str:
     prompt_type = "prompt_IS.txt"
   with open(prompt_type, "r", encoding="utf-8") as f:
     prompt = f.read()
-  model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+  model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
   contents = [prompt, json_file]
 
   for attempt in range(4):
